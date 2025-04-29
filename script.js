@@ -1,423 +1,1159 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const doorsContainer = document.getElementById('doors');
-    const challengeModal = document.getElementById('challenge-modal');
-    const challengeTitle = document.getElementById('challenge-title');
-    const challengeDescription = document.getElementById('challenge-description');
-    const codeInput = document.getElementById('code-input');
-    const submitCodeButton = document.getElementById('submit-code');
-    const codeResult = document.getElementById('code-result');
-    const closeModal = document.getElementById('close-modal');
-    const timerDisplay = document.getElementById('time');
-    const timerContainer = document.getElementById('timer');
+document.addEventListener("DOMContentLoaded", () => {
+  const landingPage = document.getElementById("landingPage")
+  const authPage = document.getElementById("authPage")
+  const enterButton = document.getElementById("enterButton")
+  const loginForm = document.getElementById("loginForm")
+  const signupForm = document.getElementById("signupForm")
+  const loginButton = loginForm.querySelector(".submit-btn")
+  const signupButton = signupForm.querySelector(".submit-btn")
+  const tabBtns = document.querySelectorAll(".tab-btn")
+  const customCursor = document.querySelector(".custom-cursor")
+  const jumpScare = document.getElementById("jumpScare")
+  const easterEggTrigger = document.getElementById("easterEggTrigger")
+  const miniGame = document.getElementById("miniGame")
+  const closeGame = document.getElementById("closeGame")
+  const gameGrid = document.getElementById("gameGrid")
+  const clicksRemaining = document.getElementById("clicksRemaining")
+  const strengthMeter = document.getElementById("strengthMeter")
+  const strengthText = document.getElementById("strengthText")
+  const hiddenMessages = document.querySelectorAll(".hidden-message")
 
-    const loginButton = document.getElementById('login-button');
-    const signupButton = document.getElementById('signup-button');
-    const loginModal = document.getElementById('login-modal');
-    const signupModal = document.getElementById('signup-modal');
-    const closeLoginModal = document.getElementById('close-login-modal');
-    const closeSignupModal = document.getElementById('close-signup-modal');
-    const loginForm = document.getElementById('login-form');
-    const signupForm = document.getElementById('signup-form');
-    const loginMessage = document.getElementById('login-message');
-    const signupMessage = document.getElementById('signup-message');
+  // Backend and Frontend URLs
+  const backendUrl = "https://escape-room-backend.vercel.app/api/auth"
+  const frontendUrl = "https://escape-room-frontend-iota.vercel.app/"
 
-    const leaderboardModal = document.getElementById('leaderboard-modal');
-    const closeLeaderboardModal = document.getElementById('close-leaderboard-modal');
-    const leaderboardTableBody = document.querySelector('#leaderboard-table tbody');
-    const totalTimeDisplay = document.getElementById('total-time');
+  // Custom cursor with improved tracking
+  document.addEventListener("mousemove", (e) => {
+    requestAnimationFrame(() => {
+      customCursor.style.left = `${e.clientX}px`
+      customCursor.style.top = `${e.clientY}px`
+    })
+  })
 
-    let timeRemaining = 300; // 5 minutes in seconds
-    let timerInterval;
-    let currentDoor = 1;
-    let doors = [];
-    let isTimerRunning = false;
-    let startTime;
-    let doorTimes = []; // Array to store time taken for each door
-    let doorStartTime; // Track start time for each door
+  document.addEventListener("mousedown", () => {
+    customCursor.classList.add("active")
+  })
 
-    // Login functionality
-    loginButton.addEventListener('click', () => {
-        loginModal.style.display = 'flex';
-    });
+  document.addEventListener("mouseup", () => {
+    customCursor.classList.remove("active")
+  })
 
-    closeLoginModal.addEventListener('click', () => {
-        loginModal.style.display = 'none';
-    });
+  // Add link hover effect to all clickable elements with improved detection
+  const updateClickableElements = () => {
+    const clickableElements = document.querySelectorAll(
+      "button, a, .tab-btn, .easter-egg-trigger, .game-cell, .close-game",
+    )
+    clickableElements.forEach((element) => {
+      if (!element.hasAttribute("data-cursor-initialized")) {
+        element.setAttribute("data-cursor-initialized", "true")
 
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
+        element.addEventListener("mouseenter", () => {
+          customCursor.classList.add("link-hover")
+        })
 
-        if (username === "user" && password === "password") {
-            loginMessage.textContent = "Login successful!";
-            loginMessage.style.color = "green";
-            setTimeout(() => {
-                loginModal.style.display = 'none';
-            }, 1000);
+        element.addEventListener("mouseleave", () => {
+          customCursor.classList.remove("link-hover")
+        })
+      }
+    })
+  }
+
+  // Initial setup of clickable elements
+  updateClickableElements()
+
+  // Update clickable elements when DOM changes (for dynamically added elements)
+  const observer = new MutationObserver(updateClickableElements)
+  observer.observe(document.body, { childList: true, subtree: true })
+
+  // Countdown timer with improved reliability
+  function updateCountdown() {
+    const hours = document.getElementById("hours")
+    const minutes = document.getElementById("minutes")
+    const seconds = document.getElementById("seconds")
+
+    if (!hours || !minutes || !seconds) return
+
+    // Decrease time by 1 second
+    let currentHours = Number.parseInt(hours.textContent)
+    let currentMinutes = Number.parseInt(minutes.textContent)
+    let currentSeconds = Number.parseInt(seconds.textContent)
+
+    if (currentSeconds > 0) {
+      currentSeconds--
+    } else {
+      if (currentMinutes > 0) {
+        currentMinutes--
+        currentSeconds = 59
+      } else {
+        if (currentHours > 0) {
+          currentHours--
+          currentMinutes = 59
+          currentSeconds = 59
         } else {
-            loginMessage.textContent = "Invalid username or password.";
-            loginMessage.style.color = "red";
+          // Time's up!
+          triggerJumpScare()
+          return
         }
-    });
+      }
+    }
 
-    // Sign Up functionality
-    signupButton.addEventListener('click', () => {
-        signupModal.style.display = 'flex';
-    });
+    hours.textContent = currentHours.toString().padStart(2, "0")
+    minutes.textContent = currentMinutes.toString().padStart(2, "0")
+    seconds.textContent = currentSeconds.toString().padStart(2, "0")
 
-    closeSignupModal.addEventListener('click', () => {
-        signupModal.style.display = 'none';
-    });
+    // Add flashing effect when time is running low
+    const countdownContainer = document.querySelector(".countdown-container")
+    if (countdownContainer && currentHours === 0 && currentMinutes < 5) {
+      countdownContainer.style.animation = "pulse 0.5s infinite"
+    }
 
-    signupForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = document.getElementById('signup-username').value;
-        const password = document.getElementById('signup-password').value;
-        const email = document.getElementById('signup-email').value;
+    setTimeout(updateCountdown, 1000)
+  }
 
-        // Simulate signup success
-        signupMessage.textContent = "Sign up successful!";
-        signupMessage.style.color = "green";
+  // Start countdown
+  updateCountdown()
+
+  // Create horror audio elements with error handling
+  const createAudioElement = (src, volume = 0.3, loop = true) => {
+    try {
+      const audio = new Audio(src)
+      audio.volume = volume
+      audio.loop = loop
+      return audio
+    } catch (error) {
+      console.error("Error creating audio element:", error)
+      // Return a dummy audio object that won't throw errors when methods are called
+      return {
+        play: () => Promise.resolve(),
+        pause: () => {},
+        volume: volume,
+        loop: loop,
+      }
+    }
+  }
+
+  // Background ambient sound
+  const ambientSound = createAudioElement(
+    "https://assets.mixkit.co/sfx/preview/mixkit-horror-ambient-atmosphere-2485.mp3",
+  )
+
+  // Button click sound
+  const buttonSound = createAudioElement(
+    "https://assets.mixkit.co/sfx/preview/mixkit-horror-wood-crack-2487.mp3",
+    0.5,
+    false,
+  )
+
+  // Heartbeat sound
+  const heartbeatSound = createAudioElement(
+    "https://assets.mixkit.co/sfx/preview/mixkit-heartbeat-in-a-scary-hospital-2482.mp3",
+    0.2,
+  )
+
+  // Jump scare sound
+  const jumpScareSound = createAudioElement(
+    "https://assets.mixkit.co/sfx/preview/mixkit-cinematic-horror-hit-with-echo-2486.mp3",
+    0.7,
+    false,
+  )
+
+  // Safe audio play function
+  const safePlayAudio = (audio) => {
+    if (audio && typeof audio.play === "function") {
+      audio.play().catch((e) => console.log("Audio play failed:", e))
+    }
+  }
+
+  // Play ambient sound on user interaction with better error handling
+  document.body.addEventListener(
+    "click",
+    () => {
+      safePlayAudio(ambientSound)
+    },
+    { once: true },
+  )
+
+  // Add horror typing effect to game description
+  const gameDescription = document.querySelector(".game-description")
+  if (gameDescription) {
+    gameDescription.classList.remove("typewriter")
+    gameDescription.style.whiteSpace = "normal"
+    gameDescription.style.borderRight = "none"
+    gameDescription.style.width = "auto"
+
+    const text = gameDescription.textContent || ""
+    gameDescription.textContent = ""
+
+    let charIndex = 0
+
+    function typeText() {
+      if (charIndex < text.length) {
+        gameDescription.textContent += text.charAt(charIndex)
+        charIndex++
+
+        // Random typing speed for horror effect
+        const randomDelay = Math.random() * (150 - 50) + 50
+        setTimeout(typeText, randomDelay)
+      }
+    }
+
+    // Start typing after a delay
+    setTimeout(typeText, 1000)
+  }
+
+  // Hidden messages with improved randomization
+  function showRandomHiddenMessage() {
+    if (!hiddenMessages || hiddenMessages.length === 0) return
+
+    // Hide any currently visible messages
+    hiddenMessages.forEach((message) => {
+      message.classList.remove("visible")
+    })
+
+    // Show a random message
+    const randomIndex = Math.floor(Math.random() * hiddenMessages.length)
+    const randomMessage = hiddenMessages[randomIndex]
+
+    // Position randomly on screen but ensure it's visible
+    const margin = 20 // % margin from edges
+    randomMessage.style.top = `${Math.random() * (100 - 2 * margin) + margin}%`
+    randomMessage.style.left = `${Math.random() * (100 - 2 * margin) + margin}%`
+
+    // Make visible
+    randomMessage.classList.add("visible")
+
+    // Schedule next message
+    setTimeout(showRandomHiddenMessage, Math.random() * 20000 + 10000)
+  }
+
+  // Start showing hidden messages after a delay
+  setTimeout(showRandomHiddenMessage, 5000)
+
+  // Jump scare function with improved reliability
+  function triggerJumpScare() {
+    if (!jumpScare) return
+
+    jumpScare.classList.add("active")
+    safePlayAudio(jumpScareSound)
+
+    setTimeout(() => {
+      jumpScare.classList.remove("active")
+    }, 800) // Increased from 500ms for better visibility
+  }
+
+  // Random jump scares with reduced frequency
+  function scheduleRandomJumpScare() {
+    const randomTime = Math.random() * 90000 + 60000 // Between 60s and 150s (less frequent)
+    setTimeout(() => {
+      // 15% chance of jump scare (reduced from 20%)
+      if (Math.random() < 0.15) {
+        triggerJumpScare()
+      }
+      scheduleRandomJumpScare()
+    }, randomTime)
+  }
+
+  // Start scheduling random jump scares
+  scheduleRandomJumpScare()
+
+  // Easter egg with improved click handling
+  if (easterEggTrigger) {
+    easterEggTrigger.addEventListener("click", (e) => {
+      e.preventDefault()
+      openMiniGame()
+
+      // Play click sound
+      const clickSound = createAudioElement(
+        "https://assets.mixkit.co/sfx/preview/mixkit-unlock-game-notification-253.mp3",
+        0.4,
+        false,
+      )
+      safePlayAudio(clickSound)
+    })
+  }
+
+  // Mini game with improved game logic
+  let keyIndex = -1 // Store key index globally
+
+  function openMiniGame() {
+    if (!miniGame || !gameGrid) return
+
+    miniGame.classList.remove("hidden")
+
+    // Create game grid
+    gameGrid.innerHTML = ""
+    let remainingClicks = 10
+    if (clicksRemaining) {
+      clicksRemaining.textContent = remainingClicks
+    }
+
+    // Set random key location
+    keyIndex = Math.floor(Math.random() * 16)
+
+    // Create 16 cells (4x4 grid)
+    for (let i = 0; i < 16; i++) {
+      const cell = document.createElement("div")
+      cell.className = "game-cell"
+      cell.dataset.index = i
+
+      cell.addEventListener("click", (e) => {
+        e.preventDefault()
+
+        if (cell.classList.contains("revealed")) return
+
+        // Decrease clicks
+        remainingClicks--
+        if (clicksRemaining) {
+          clicksRemaining.textContent = remainingClicks
+        }
+
+        // Reveal cell
+        cell.classList.add("revealed")
+
+        // Check if key found
+        if (Number.parseInt(cell.dataset.index) === keyIndex) {
+          cell.textContent = "🔑"
+
+          // Play success sound
+          const successSound = createAudioElement(
+            "https://assets.mixkit.co/sfx/preview/mixkit-magical-coin-win-1936.mp3",
+            0.3,
+            false,
+          )
+          safePlayAudio(successSound)
+
+          setTimeout(() => {
+            alert("You found the key! You can now escape...")
+            miniGame.classList.add("hidden")
+          }, 1000)
+        } else {
+          // Random horror symbol
+          const symbols = ["💀", "👻", "🕷️", "🦇", "🔪", "⚰️", "🩸", "👁️"]
+          cell.textContent = symbols[Math.floor(Math.random() * symbols.length)]
+
+          // Play fail sound
+          const failSound = createAudioElement(
+            "https://assets.mixkit.co/sfx/preview/mixkit-spooky-forest-wind-1228.mp3",
+            0.2,
+            false,
+          )
+          safePlayAudio(failSound)
+
+          // Check if out of clicks
+          if (remainingClicks <= 0) {
+            setTimeout(() => {
+              alert("You ran out of attempts! The darkness consumes you...")
+              miniGame.classList.add("hidden")
+              triggerJumpScare()
+            }, 500)
+          }
+        }
+
+        // Update clickable elements for the newly revealed cell
+        updateClickableElements()
+      })
+
+      gameGrid.appendChild(cell)
+    }
+
+    // Update clickable elements for the new game cells
+    updateClickableElements()
+  }
+
+  // Close mini game with improved click handling
+  if (closeGame) {
+    closeGame.addEventListener("click", (e) => {
+      e.preventDefault()
+      if (miniGame) {
+        miniGame.classList.add("hidden")
+      }
+
+      // Play close sound
+      const closeSound = createAudioElement(
+        "https://assets.mixkit.co/sfx/preview/mixkit-gate-latch-click-1924.mp3",
+        0.3,
+        false,
+      )
+      safePlayAudio(closeSound)
+    })
+  }
+
+  // 🔹 Transition from Landing Page to Auth Page with enhanced effects and reliability
+  if (enterButton) {
+    enterButton.addEventListener("click", (e) => {
+      e.preventDefault()
+      safePlayAudio(buttonSound)
+
+      // Flicker effect before transition
+      let flickerCount = 0
+      const flickerInterval = setInterval(() => {
+        if (landingPage) {
+          landingPage.style.opacity = flickerCount % 2 === 0 ? "0.5" : "1"
+        }
+        flickerCount++
+
+        if (flickerCount > 6) {
+          clearInterval(flickerInterval)
+
+          // Start actual transition
+          if (landingPage) {
+            landingPage.style.opacity = "0"
+            landingPage.style.transform = "scale(1.1)"
+          }
+
+          setTimeout(() => {
+            if (landingPage) landingPage.classList.add("hidden")
+            if (authPage) authPage.classList.remove("hidden")
+
+            // Play heartbeat sound during auth page
+            safePlayAudio(heartbeatSound)
+
+            setTimeout(() => {
+              if (authPage) authPage.style.opacity = "1"
+            }, 50)
+          }, 800)
+        }
+      }, 100)
+    })
+  }
+
+  // 🔹 Enhanced fade effect for pages
+  if (landingPage) {
+    landingPage.style.transition = "opacity 0.8s ease, transform 0.8s ease"
+  }
+  if (authPage) {
+    authPage.style.transition = "opacity 0.8s ease"
+    authPage.style.opacity = "0"
+  }
+
+  // 🔹 Tab Switching with animation (Login / Signup) and improved reliability
+  tabBtns.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault()
+      safePlayAudio(buttonSound)
+
+      tabBtns.forEach((b) => b.classList.remove("active"))
+      btn.classList.add("active")
+
+      if (btn.dataset.tab === "login") {
+        if (signupForm) {
+          signupForm.style.opacity = "0"
+          signupForm.style.transform = "translateX(20px)"
+        }
+
         setTimeout(() => {
-            signupModal.style.display = 'none';
-        }, 1000);
-    });
+          if (loginForm) loginForm.classList.remove("hidden")
+          if (signupForm) signupForm.classList.add("hidden")
 
-    // Timer functionality
-    function startTimer() {
-        if (!isTimerRunning) {
-            isTimerRunning = true;
-            timerContainer.style.display = 'block';
-            startTime = Date.now();
-            timerInterval = setInterval(() => {
-                timeRemaining--;
-                updateTimerDisplay();
-
-                if (timeRemaining <= 0) {
-                    clearInterval(timerInterval);
-                    alert("Time's up! You failed to escape.");
-                    resetGame();
-                }
-            }, 1000);
-        }
-    }
-
-    function stopTimer() {
-        clearInterval(timerInterval);
-        isTimerRunning = false;
-        timerContainer.style.display = 'none';
-    }
-
-    function resetTimer() {
-        timeRemaining = 300;
-        updateTimerDisplay();
-    }
-
-    function updateTimerDisplay() {
-        const minutes = Math.floor(timeRemaining / 60);
-        const seconds = timeRemaining % 60;
-        timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    function resetGame() {
-        stopTimer();
-        resetTimer();
-        currentDoor = 1;
-        doorTimes = []; // Reset door times
-        createDoors();
-    }
-
-    // Challenges
-    const challenges = [
-        // Door 1: MCQ (Guess the Output)
-        {
-            title: "Door 1: Guess the Output",
-            description: "What will be the output of the following code?\n\nconst x = 5;\nconst y = 3;\nconsole.log(x + y);",
-            type: "mcq",
-            options: ["8", "53", "35", "Error"],
-            correctAnswer: "8",
-        },
-        // Door 2: MCQ (Guess the Output)
-        {
-            title: "Door 2: Guess the Output",
-            description: "What will be the output of the following code?\n\nconst arr = [1, 2, 3];\narr.push(4);\nconsole.log(arr.length);",
-            type: "mcq",
-            options: ["3", "4", "5", "Error"],
-            correctAnswer: "4",
-        },
-        // Door 3: MCQ (Guess the Output)
-        {
-            title: "Door 3: Guess the Output",
-            description: "What will be the output of the following code?\n\nconst str = 'Hello';\nconsole.log(str.toUpperCase());",
-            type: "mcq",
-            options: ["hello", "HELLO", "Hello", "Error"],
-            correctAnswer: "HELLO",
-        },
-        // Door 4: Fill in the Blanks
-        {
-            title: "Door 4: Fill in the Blanks",
-            description: "Complete the code to calculate the sum of two numbers.\n\nfunction sum(a, b) {\n  return a ___ b;\n}",
-            type: "fillInTheBlank",
-            correctAnswer: "+",
-        },
-        // Door 5: Fill in the Blanks
-        {
-            title: "Door 5: Fill in the Blanks",
-            description: "Complete the code to check if a number is even.\n\nfunction isEven(num) {\n  return num ___ 2 === 0;\n}",
-            type: "fillInTheBlank",
-            correctAnswer: "%",
-        },
-        // Door 6: Fill in the Blanks
-        {
-            title: "Door 6: Fill in the Blanks",
-            description: "Complete the code to reverse a string.\n\nfunction reverseString(str) {\n  return str.___('').___('');\n}",
-            type: "fillInTheBlank",
-            correctAnswer: "split,reverse,join",
-        },
-        // Door 7: Write Full Code
-        {
-            title: "Door 7: Write Full Code",
-            description: "Write a function `factorial(n)` that returns the factorial of a number.",
-            type: "writeCode",
-            test: (code) => {
-                try {
-                    const func = new Function(`${code}; return factorial(5);`);
-                    return func() === 120;
-                } catch (error) {
-                    return false;
-                }
-            },
-        },
-        // Door 8: Write Full Code
-        {
-            title: "Door 8: Write Full Code",
-            description: "Write a function `isPalindrome(str)` that returns `true` if the input string is a palindrome, otherwise `false`.",
-            type: "writeCode",
-            test: (code) => {
-                try {
-                    const func = new Function(`${code}; return isPalindrome('racecar');`);
-                    return func() === true;
-                } catch (error) {
-                    return false;
-                }
-            },
-        },
-        // Door 9: Write Full Code
-        {
-            title: "Door 9: Write Full Code",
-            description: "Write a function `findLargest(arr)` that returns the largest number in an array.",
-            type: "writeCode",
-            test: (code) => {
-                try {
-                    const func = new Function(`${code}; return findLargest([1, 5, 3, 9, 2]);`);
-                    return func() === 9;
-                } catch (error) {
-                    return false;
-                }
-            },
-        },
-        // Door 10: Write Full Code
-        {
-            title: "Door 10: Write Full Code",
-            description: "Write a function `countVowels(str)` that returns the number of vowels in the input string.",
-            type: "writeCode",
-            test: (code) => {
-                try {
-                    const func = new Function(`${code}; return countVowels('hello world');`);
-                    return func() === 3;
-                } catch (error) {
-                    return false;
-                }
-            },
-        },
-    ];
-
-    // Create doors
-    function createDoors() {
-        doorsContainer.innerHTML = '';
-        for (let i = 1; i <= 10; i++) {
-            const door = document.createElement('div');
-            door.className = i === 1 ? 'door unlocked' : 'door locked';
-            if (i === 1) {
-                door.textContent = "JavaScript";
-            } else {
-                door.textContent = `Door ${i}`;
+          setTimeout(() => {
+            if (loginForm) {
+              loginForm.style.opacity = "1"
+              loginForm.style.transform = "translateX(0)"
             }
-            door.addEventListener('click', () => {
-                if (i === currentDoor) {
-                    doorStartTime = Date.now(); // Track start time for the door
-                    startTimer();
-                    openChallengeModal(challenges[i - 1]);
-                    door.classList.add('open'); // Add open animation
-                }
-            });
-            doorsContainer.appendChild(door);
-            doors.push(door);
+          }, 50)
+        }, 300)
+      } else {
+        if (loginForm) {
+          loginForm.style.opacity = "0"
+          loginForm.style.transform = "translateX(-20px)"
         }
-        updateDoorVisibility();
-    }
 
-    function updateDoorVisibility() {
-        doors.forEach((door, index) => {
-            if (index + 1 === currentDoor) {
-                door.classList.add('unlocked');
-                door.style.display = 'block';
-            } else {
-                door.style.display = 'none';
+        setTimeout(() => {
+          if (loginForm) loginForm.classList.add("hidden")
+          if (signupForm) signupForm.classList.remove("hidden")
+
+          setTimeout(() => {
+            if (signupForm) {
+              signupForm.style.opacity = "1"
+              signupForm.style.transform = "translateX(0)"
             }
-        });
+          }, 50)
+        }, 300)
+      }
+    })
+  })
+
+  // Set initial form styles for animations
+  if (loginForm) {
+    loginForm.style.opacity = "1"
+    loginForm.style.transform = "translateX(0)"
+    loginForm.style.transition = "opacity 0.3s ease, transform 0.3s ease"
+  }
+
+  if (signupForm) {
+    signupForm.style.opacity = "0"
+    signupForm.style.transform = "translateX(20px)"
+    signupForm.style.transition = "opacity 0.3s ease, transform 0.3s ease"
+  }
+
+  // Password strength meter with improved validation
+  const passwordInput = document.getElementById("signup-password")
+  if (passwordInput) {
+    passwordInput.addEventListener("input", () => {
+      const password = passwordInput.value
+      let strength = 0
+
+      // Calculate password strength with better criteria
+      if (password.length >= 8) strength += 1
+      if (password.length >= 12) strength += 0.5
+      if (/[A-Z]/.test(password)) strength += 1
+      if (/[0-9]/.test(password)) strength += 1
+      if (/[^A-Za-z0-9]/.test(password)) strength += 1
+      if (/[0-9].*[0-9]/.test(password)) strength += 0.5 // At least 2 numbers
+
+      // Update strength meter
+      if (strengthMeter && strengthText) {
+        if (password.length === 0) {
+          strengthMeter.style.width = "0"
+          strengthMeter.className = "strength-meter-fill"
+          strengthText.textContent = "Password strength"
+        } else if (strength <= 2) {
+          strengthMeter.style.width = "33%"
+          strengthMeter.className = "strength-meter-fill weak"
+          strengthText.textContent = "Weak"
+        } else if (strength <= 3.5) {
+          strengthMeter.style.width = "66%"
+          strengthMeter.className = "strength-meter-fill medium"
+          strengthText.textContent = "Medium"
+        } else {
+          strengthMeter.style.width = "100%"
+          strengthMeter.className = "strength-meter-fill strong"
+          strengthText.textContent = "Strong"
+        }
+      }
+
+      // Play typing sound with pitch based on strength
+      const typingSound = createAudioElement(
+        "https://assets.mixkit.co/sfx/preview/mixkit-typewriter-key-single-hit-1362.mp3",
+        0.1,
+        false,
+      )
+      if (typingSound.playbackRate !== undefined) {
+        typingSound.playbackRate = 0.8 + strength * 0.2 // Increase pitch with strength
+      }
+      safePlayAudio(typingSound)
+    })
+  }
+
+  // 🔹 Handle Login with animation and improved form validation
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault()
+
+      const emailInput = e.target.querySelector('input[type="email"]')
+      const passwordInput = e.target.querySelector('input[type="password"]')
+
+      if (!emailInput || !passwordInput) {
+        alert("Form inputs not found. Please try again.")
+        return
+      }
+
+      const email = emailInput.value
+      const password = passwordInput.value
+
+      // Basic validation
+      if (!email || !password) {
+        alert("Please fill in all fields")
+        return
+      }
+
+      if (!email.includes("@") || !email.includes(".")) {
+        alert("Please enter a valid email address")
+        return
+      }
+
+      // Button press animation
+      if (loginButton) {
+        loginButton.style.transform = "scale(0.95)"
+        setTimeout(() => {
+          loginButton.style.transform = "scale(1)"
+        }, 100)
+      }
+
+      try {
+        // Show loading state
+        if (loginButton) {
+          loginButton.disabled = true
+          loginButton.textContent = "Logging in..."
+        }
+
+        const res = await fetch(`${backendUrl}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        })
+
+        const data = await res.json()
+
+        if (res.ok) {
+          localStorage.setItem("token", data.token)
+
+          // Success animation
+          document.body.style.transition = "filter 2s ease"
+          document.body.style.filter = "brightness(2) blur(10px)"
+
+          setTimeout(() => {
+            alert("Login successful! Redirecting...")
+            window.location.href = frontendUrl // ✅ Redirect to Game Frontend
+          }, 1000)
+        } else {
+          // Error animation
+          if (loginForm) {
+            loginForm.style.animation = "shake 0.5s ease"
+            setTimeout(() => {
+              loginForm.style.animation = ""
+            }, 500)
+          }
+          alert(data.error || "Login failed. Please try again.")
+
+          // Reset button state
+          if (loginButton) {
+            loginButton.disabled = false
+            loginButton.textContent = "Enter The Room"
+          }
+        }
+      } catch (err) {
+        console.error("Login error:", err)
+        alert("Login failed! Please try again.")
+
+        // Reset button state
+        if (loginButton) {
+          loginButton.disabled = false
+          loginButton.textContent = "Enter The Room"
+        }
+      }
+    })
+  }
+
+  // 🔹 Handle Signup with animation and improved form validation
+  if (signupForm) {
+    signupForm.addEventListener("submit", async (e) => {
+      e.preventDefault()
+
+      const usernameInput = e.target.querySelector('input[type="text"]')
+      const emailInput = e.target.querySelector('input[type="email"]')
+      const passwordInputs = e.target.querySelectorAll('input[type="password"]')
+
+      if (!usernameInput || !emailInput || passwordInputs.length < 2) {
+        alert("Form inputs not found. Please try again.")
+        return
+      }
+
+      const username = usernameInput.value
+      const email = emailInput.value
+      const password = passwordInputs[0].value
+      const confirmPassword = passwordInputs[1].value
+
+      // Basic validation
+      if (!username || !email || !password || !confirmPassword) {
+        alert("Please fill in all fields")
+        return
+      }
+
+      if (username.length < 3) {
+        alert("Username must be at least 3 characters long")
+        return
+      }
+
+      if (!email.includes("@") || !email.includes(".")) {
+        alert("Please enter a valid email address")
+        return
+      }
+
+      if (password.length < 6) {
+        alert("Password must be at least 6 characters long")
+        return
+      }
+
+      // Button press animation
+      if (signupButton) {
+        signupButton.style.transform = "scale(0.95)"
+        setTimeout(() => {
+          signupButton.style.transform = "scale(1)"
+        }, 100)
+      }
+
+      if (password !== confirmPassword) {
+        // Password mismatch animation
+        if (signupForm) {
+          signupForm.style.animation = "shake 0.5s ease"
+          setTimeout(() => {
+            signupForm.style.animation = ""
+          }, 500)
+        }
+        alert("Passwords do not match!")
+        return
+      }
+
+      try {
+        // Show loading state
+        if (signupButton) {
+          signupButton.disabled = true
+          signupButton.textContent = "Signing up..."
+        }
+
+        const res = await fetch(`${backendUrl}/signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, email, password }),
+        })
+
+        const data = await res.json()
+
+        if (res.ok) {
+          // Success animation
+          document.body.style.transition = "filter 2s ease"
+          document.body.style.filter = "brightness(2) blur(10px)"
+
+          setTimeout(() => {
+            alert("Signup successful! Redirecting to game...")
+            window.location.href = frontendUrl // ✅ Redirect to Game Frontend after Signup
+          }, 1000)
+        } else {
+          // Error animation
+          if (signupForm) {
+            signupForm.style.animation = "shake 0.5s ease"
+            setTimeout(() => {
+              signupForm.style.animation = ""
+            }, 500)
+          }
+          alert(data.error || "Signup failed. Please try again.")
+
+          // Reset button state
+          if (signupButton) {
+            signupButton.disabled = false
+            signupButton.textContent = "Begin Your Journey"
+          }
+        }
+      } catch (err) {
+        console.error("Signup error:", err)
+        alert("Signup failed! Please try again.")
+
+        // Reset button state
+        if (signupButton) {
+          signupButton.disabled = false
+          signupButton.textContent = "Begin Your Journey"
+        }
+      }
+    })
+  }
+
+  // 🔹 Enhanced Button Movement and Disabling with improved validation
+  // Function to check if all inputs in a form are filled
+  const isFormComplete = (form) => {
+    if (!form) return false
+
+    const inputs = form.querySelectorAll("input[required]")
+    return Array.from(inputs).every((input) => input.value.trim() !== "")
+  }
+
+  // Function to enable/disable buttons based on form completion
+  const updateButtonState = (form, button) => {
+    if (!form || !button) return
+
+    if (isFormComplete(form)) {
+      button.disabled = false
+      button.classList.remove("disabled")
+    } else {
+      button.disabled = true
+      button.classList.add("disabled")
     }
+  }
 
-    function openChallengeModal(challenge) {
-        challengeTitle.textContent = challenge.title;
-        challengeDescription.textContent = challenge.description;
-        codeInput.value = '';
-        codeResult.textContent = '';
+  // Add input event listeners to login form with typing sound
+  if (loginForm) {
+    loginForm.querySelectorAll("input").forEach((input) => {
+      input.addEventListener("input", () => {
+        // Play typing sound
+        if (input.value.length > 0) {
+          const typingSound = createAudioElement(
+            "https://assets.mixkit.co/sfx/preview/mixkit-typewriter-key-single-hit-1362.mp3",
+            0.2,
+            false,
+          )
+          safePlayAudio(typingSound)
+        }
 
-        // Clear previous content
-        codeInput.style.display = 'block';
-        submitCodeButton.style.display = 'block';
-        codeResult.style.display = 'block';
+        updateButtonState(loginForm, loginButton)
+      })
+    })
+  }
 
-        // Remove any existing event listeners on the submit button
-        submitCodeButton.replaceWith(submitCodeButton.cloneNode(true));
+  // Add input event listeners to signup form with typing sound
+  if (signupForm) {
+    signupForm.querySelectorAll("input").forEach((input) => {
+      if (input.id !== "signup-password") {
+        // Password input has its own listener
+        input.addEventListener("input", () => {
+          // Play typing sound
+          if (input.value.length > 0) {
+            const typingSound = createAudioElement(
+              "https://assets.mixkit.co/sfx/preview/mixkit-typewriter-key-single-hit-1362.mp3",
+              0.2,
+              false,
+            )
+            safePlayAudio(typingSound)
+          }
 
-        if (challenge.type === "mcq") {
-            // Hide code input for MCQ
-            codeInput.style.display = 'none';
-            submitCodeButton.style.display = 'none';
-            codeResult.style.display = 'none';
+          updateButtonState(signupForm, signupButton)
+        })
+      } else {
+        // Still update button state for password input
+        input.addEventListener("input", () => {
+          updateButtonState(signupForm, signupButton)
+        })
+      }
+    })
+  }
 
-            // Create MCQ options
-            const optionsContainer = document.createElement('div');
-            optionsContainer.id = 'mcq-options';
-            challengeDescription.appendChild(optionsContainer);
+  // Function to move the button randomly on the page with horror effect
+  const moveButtonRandomly = (button) => {
+    if (!button) return
 
-            challenge.options.forEach((option, index) => {
-                const optionButton = document.createElement('button');
-                optionButton.textContent = option;
-                optionButton.addEventListener('click', () => {
-                    if (option === challenge.correctAnswer) {
-                        codeResult.textContent = "Correct! Door unlocked.";
-                        codeResult.style.color = "green";
-                        setTimeout(() => {
-                            challengeModal.style.display = 'none';
-                            stopTimer();
-                            resetTimer();
-                            if (currentDoor < 10) {
-                                const doorTime = Math.floor((Date.now() - doorStartTime) / 1000); // Calculate time taken for the door
-                                doorTimes.push({ door: currentDoor, time: doorTime }); // Store door time
-                                currentDoor++;
-                                updateDoorVisibility();
-                            } else {
-                                const doorTime = Math.floor((Date.now() - doorStartTime) / 1000); // Calculate time taken for the last door
-                                doorTimes.push({ door: currentDoor, time: doorTime }); // Store door time
-                                showLeaderboard();
-                            }
-                        }, 1000);
-                    } else {
-                        codeResult.textContent = "Incorrect. Try again.";
-                        codeResult.style.color = "red";
+    const windowWidth = window.innerWidth
+    const windowHeight = window.innerHeight
+    const buttonWidth = button.offsetWidth
+    const buttonHeight = button.offsetHeight
+
+    // Generate random positions within the window bounds
+    // Keep button within viewport with margins
+    const margin = 50 // pixels from edge
+    const randomX = Math.floor(Math.random() * (windowWidth - buttonWidth - 2 * margin) + margin)
+    const randomY = Math.floor(Math.random() * (windowHeight - buttonHeight - 2 * margin) + margin)
+
+    // Horror sound effect
+    const horrorSound = createAudioElement(
+      "https://assets.mixkit.co/sfx/preview/mixkit-horror-dream-transition-1002.mp3",
+      0.3,
+      false,
+    )
+    safePlayAudio(horrorSound)
+
+    // Move the button to the random position with horror effect
+    button.style.position = "fixed"
+    button.style.left = `${randomX}px`
+    button.style.top = `${randomY}px`
+    button.style.zIndex = "1000"
+
+    // Add flickering effect to the button
+    let flickerCount = 0
+    const flickerInterval = setInterval(() => {
+      button.style.opacity = flickerCount % 2 === 0 ? "0.7" : "1"
+      flickerCount++
+
+      if (flickerCount > 6) {
+        clearInterval(flickerInterval)
+        button.style.opacity = "1"
+      }
+    }, 100)
+  }
+
+  // Add click event listener to disabled buttons for random movement
+  const addButtonMovementEffect = (button) => {
+    if (!button) return
+
+    button.addEventListener("click", (e) => {
+      if (button.disabled) {
+        e.preventDefault() // Prevent form submission
+        moveButtonRandomly(button) // Move the button randomly
+      }
+    })
+  }
+
+  addButtonMovementEffect(loginButton)
+  addButtonMovementEffect(signupButton)
+
+  // Initialize button states
+  updateButtonState(loginForm, loginButton)
+  updateButtonState(signupForm, signupButton)
+
+  // Add particle effects to the background
+  const createParticles = () => {
+    const particleContainer = document.createElement("div")
+    particleContainer.className = "particle-container"
+    particleContainer.style.position = "fixed"
+    particleContainer.style.top = "0"
+    particleContainer.style.left = "0"
+    particleContainer.style.width = "100%"
+    particleContainer.style.height = "100%"
+    particleContainer.style.pointerEvents = "none"
+    particleContainer.style.zIndex = "5"
+    document.body.appendChild(particleContainer)
+
+    for (let i = 0; i < 50; i++) {
+      const particle = document.createElement("div")
+      particle.className = "particle"
+      particle.style.position = "absolute"
+      particle.style.width = `${Math.random() * 5 + 1}px`
+      particle.style.height = particle.style.width
+      particle.style.background = "rgba(220, 38, 38, 0.5)"
+      particle.style.borderRadius = "50%"
+      particle.style.top = `${Math.random() * 100}%`
+      particle.style.left = `${Math.random() * 100}%`
+      particle.style.boxShadow = "0 0 10px rgba(220, 38, 38, 0.7)"
+
+      // Set animation
+      particle.style.animation = `float-particle ${Math.random() * 10 + 10}s linear infinite`
+
+      // Add keyframes for the animation
+      if (!document.querySelector("#particle-keyframes")) {
+        const style = document.createElement("style")
+        style.id = "particle-keyframes"
+        style.textContent = `
+                    @keyframes float-particle {
+                        0% {
+                            transform: translateY(0) rotate(0deg);
+                            opacity: 0;
+                        }
+                        10% {
+                            opacity: 0.5;
+                        }
+                        90% {
+                            opacity: 0.5;
+                        }
+                        100% {
+                            transform: translateY(-100vh) rotate(360deg);
+                            opacity: 0;
+                        }
                     }
-                });
-                optionsContainer.appendChild(optionButton);
-            });
-        } else if (challenge.type === "fillInTheBlank") {
-            // Show code input for Fill in the Blanks
-            codeInput.placeholder = "Fill in the blank(s)";
-            submitCodeButton.addEventListener('click', () => {
-                const userAnswer = codeInput.value.trim();
-                if (userAnswer === challenge.correctAnswer) {
-                    codeResult.textContent = "Correct! Door unlocked.";
-                    codeResult.style.color = "green";
-                    setTimeout(() => {
-                        challengeModal.style.display = 'none';
-                        stopTimer();
-                        resetTimer();
-                        if (currentDoor < 10) {
-                            const doorTime = Math.floor((Date.now() - doorStartTime) / 1000); // Calculate time taken for the door
-                            doorTimes.push({ door: currentDoor, time: doorTime }); // Store door time
-                            currentDoor++;
-                            updateDoorVisibility();
-                        } else {
-                            const doorTime = Math.floor((Date.now() - doorStartTime) / 1000); // Calculate time taken for the last door
-                            doorTimes.push({ door: currentDoor, time: doorTime }); // Store door time
-                            showLeaderboard();
-                        }
-                    }, 1000);
-                } else {
-                    codeResult.textContent = "Incorrect. Try again.";
-                    codeResult.style.color = "red";
-                }
-            });
-        } else if (challenge.type === "writeCode") {
-            // Show code input for Write Full Code
-            codeInput.placeholder = "Write your code here...";
-            submitCodeButton.addEventListener('click', () => {
-                const userCode = codeInput.value;
-                if (challenge.test(userCode)) {
-                    codeResult.textContent = "Correct! Door unlocked.";
-                    codeResult.style.color = "green";
-                    setTimeout(() => {
-                        challengeModal.style.display = 'none';
-                        stopTimer();
-                        resetTimer();
-                        if (currentDoor < 10) {
-                            const doorTime = Math.floor((Date.now() - doorStartTime) / 1000); // Calculate time taken for the door
-                            doorTimes.push({ door: currentDoor, time: doorTime }); // Store door time
-                            currentDoor++;
-                            updateDoorVisibility();
-                        } else {
-                            const doorTime = Math.floor((Date.now() - doorStartTime) / 1000); // Calculate time taken for the last door
-                            doorTimes.push({ door: currentDoor, time: doorTime }); // Store door time
-                            showLeaderboard();
-                        }
-                    }, 1000);
-                } else {
-                    codeResult.textContent = "Incorrect. Try again.";
-                    codeResult.style.color = "red";
-                }
-            });
+                `
+        document.head.appendChild(style)
+      }
+
+      particleContainer.appendChild(particle)
+    }
+  }
+
+  // Create particles
+  createParticles()
+
+  // Add 3D tilt effect to form elements with improved performance
+  const addTiltEffect = (element) => {
+    if (!element) return
+
+    let tiltTimeout
+
+    element.addEventListener("mousemove", (e) => {
+      if (tiltTimeout) {
+        cancelAnimationFrame(tiltTimeout)
+      }
+
+      tiltTimeout = requestAnimationFrame(() => {
+        const rect = element.getBoundingClientRect()
+        const x = e.clientX - rect.left
+        const y = e.clientY - rect.top
+
+        const xPercent = x / rect.width - 0.5
+        const yPercent = y / rect.height - 0.5
+
+        const maxTilt = 5 // Maximum tilt in degrees
+
+        element.style.transform = `perspective(1000px) rotateX(${-yPercent * maxTilt}deg) rotateY(${xPercent * maxTilt}deg) scale3d(1.02, 1.02, 1.02)`
+      })
+    })
+
+    element.addEventListener("mouseleave", () => {
+      if (tiltTimeout) {
+        cancelAnimationFrame(tiltTimeout)
+      }
+      element.style.transform = "perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)"
+    })
+  }
+
+  // Apply tilt effect to login container
+  const loginContainer = document.querySelector(".login-container")
+  if (loginContainer) {
+    addTiltEffect(loginContainer)
+  }
+
+  // Add horror text scramble effect with improved performance
+  const addTextScramble = (element) => {
+    if (!element) return
+
+    const originalText = element.textContent || ""
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+{}:"<>?|'
+    let scrambleInterval
+
+    element.addEventListener("mouseover", () => {
+      let iterations = 0
+
+      // Clear any existing interval
+      if (scrambleInterval) {
+        clearInterval(scrambleInterval)
+      }
+
+      scrambleInterval = setInterval(() => {
+        element.textContent = originalText
+          .split("")
+          .map((letter, index) => {
+            if (index < iterations) {
+              return originalText[index]
+            }
+            return letters[Math.floor(Math.random() * letters.length)]
+          })
+          .join("")
+
+        if (iterations >= originalText.length) {
+          clearInterval(scrambleInterval)
+          element.textContent = originalText
         }
 
-        challengeModal.style.display = 'flex';
+        iterations += 1 / 3
+      }, 30)
+    })
+
+    element.addEventListener("mouseleave", () => {
+      clearInterval(scrambleInterval)
+      element.textContent = originalText
+    })
+  }
+
+  // Apply text scramble to headings and buttons
+  document.querySelectorAll("h1, .submit-btn, .tab-btn").forEach(addTextScramble)
+
+  // Add floating horror elements animation with improved randomization
+  const animateFloatingElements = () => {
+    const elements = document.querySelectorAll(
+      ".floating-skull, .floating-ghost, .floating-spider, .floating-bat, .floating-knife",
+    )
+
+    elements.forEach((element) => {
+      // Initial random position
+      const randomX = Math.random() * window.innerWidth * 0.8
+      const randomY = Math.random() * window.innerHeight * 0.8
+
+      element.style.transform = `translate(${randomX}px, ${randomY}px)`
+
+      // Randomly reposition elements occasionally
+      const moveElement = () => {
+        const newX = Math.random() * window.innerWidth * 0.8
+        const newY = Math.random() * window.innerHeight * 0.8
+        const rotation = Math.random() * 360
+        const scale = 0.8 + Math.random() * 0.5
+
+        element.style.transition = "transform 5s ease-in-out"
+        element.style.transform = `translate(${newX}px, ${newY}px) rotate(${rotation}deg) scale(${scale})`
+
+        // Schedule next movement
+        setTimeout(moveElement, 5000 + Math.random() * 5000)
+      }
+
+      // Start movement after a random delay
+      setTimeout(moveElement, Math.random() * 2000)
+    })
+  }
+
+  // Start floating elements animation
+  animateFloatingElements()
+
+  // Add input field focus effects with sound and improved reliability
+  document.querySelectorAll("input").forEach((input) => {
+    input.addEventListener("focus", () => {
+      // Play eerie focus sound
+      const focusSound = createAudioElement(
+        "https://assets.mixkit.co/sfx/preview/mixkit-cinematic-mystery-strings-2843.mp3",
+        0.1,
+        false,
+      )
+      safePlayAudio(focusSound)
+
+      // Add visual effect to parent without affecting visibility
+      const parent = input.parentElement
+      if (parent) {
+        parent.style.transform = "scale(1.05)"
+        parent.style.zIndex = "100"
+        // Make sure floating label is hidden
+        const label = parent.querySelector(".floating-label")
+        if (label) {
+          label.style.opacity = "0"
+          label.style.visibility = "hidden"
+        }
+      }
+    })
+
+    input.addEventListener("blur", () => {
+      const parent = input.parentElement
+      if (parent) {
+        parent.style.transform = ""
+        parent.style.zIndex = ""
+      }
+    })
+  })
+
+  // Add more blood drips dynamically with improved performance
+  const addMoreBloodDrips = () => {
+    const bloodContainer = document.querySelector(".blood-drips")
+    if (!bloodContainer) return
+
+    // Limit the number of active drips
+    const maxDrips = 15
+
+    const createDrip = () => {
+      // Check if we already have too many drips
+      const currentDrips = bloodContainer.querySelectorAll(".drip").length
+      if (currentDrips >= maxDrips) return
+
+      const drip = document.createElement("div")
+      drip.className = "drip"
+      drip.style.left = `${Math.random() * 100}%`
+      drip.style.animationDelay = `${Math.random() * 2}s`
+      drip.style.width = `${3 + Math.random() * 8}px`
+      drip.style.height = `${30 + Math.random() * 100}px`
+
+      bloodContainer.appendChild(drip)
+
+      // Remove drip after animation completes
+      setTimeout(() => {
+        if (drip.parentNode === bloodContainer) {
+          bloodContainer.removeChild(drip)
+        }
+      }, 10000)
     }
 
-    function showLeaderboard() {
-        // Sort doorTimes array by time taken (ascending order)
-        doorTimes.sort((a, b) => a.time - b.time);
-
-        // Display total time taken
-        const totalTime = Math.floor((Date.now() - startTime) / 1000);
-        totalTimeDisplay.textContent = totalTime;
-
-        // Clear previous leaderboard rows
-        leaderboardTableBody.innerHTML = '';
-
-        // Add rows to the leaderboard table
-        doorTimes.forEach((doorTime) => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>Door ${doorTime.door}</td>
-                <td>${doorTime.time} seconds</td>
-            `;
-            leaderboardTableBody.appendChild(row);
-        });
-
-        // Show the leaderboard modal
-        leaderboardModal.style.display = 'flex';
+    // Create initial drips
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => createDrip(), i * 500)
     }
 
-    closeModal.addEventListener('click', () => {
-        challengeModal.style.display = 'none';
-        updateDoorVisibility(); // Ensure the current door is visible after closing the modal
-    });
+    // Continue adding drips periodically
+    setInterval(createDrip, 3000)
+  }
 
-    closeLeaderboardModal.addEventListener('click', () => {
-        leaderboardModal.style.display = 'none';
-    });
+  // Start adding blood drips
+  addMoreBloodDrips()
 
-    // Start the game
-    createDoors();
-});
+  // Check if device is mobile
+  const isMobile = () => {
+    return window.innerWidth <= 768
+  }
+
+  // Adjust UI elements based on screen size
+  const adjustForScreenSize = () => {
+    // Responsive adjustments for mobile
+    if (isMobile()) {
+      // Make buttons more touch-friendly
+      const buttons = document.querySelectorAll("button, .game-cell, .close-game")
+      buttons.forEach((button) => {
+        button.style.padding = button.classList.contains("submit-btn") ? "1rem" : ""
+        button.style.fontSize = button.classList.contains("submit-btn") ? "1.1rem" : ""
+      })
+    }
+  }
+
+  // Run on load and resize
+  adjustForScreenSize()
+  window.addEventListener("resize", adjustForScreenSize)
+
+  // Ensure forms are properly displayed after page load
+  setTimeout(() => {
+    if (loginForm && !loginForm.classList.contains("hidden")) {
+      loginForm.style.opacity = "1"
+      loginForm.style.transform = "translateX(0)"
+    }
+    if (signupForm && !signupForm.classList.contains("hidden")) {
+      signupForm.style.opacity = "1"
+      signupForm.style.transform = "translateX(0)"
+    }
+  }, 500)
+})
+
